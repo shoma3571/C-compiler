@@ -16,6 +16,7 @@ assert() {
   fi
 }
 
+
 assert 0 0
 assert 42 42
 assert 21 "5+20-4"
@@ -47,5 +48,12 @@ assert 1 '1>=0'
 assert 1 '1>=1'
 assert 0 '1>=2'
 
+
+assert 8 "2^3"
+assert 32 "2^5"
+assert 49 "7^2"
+
+assert 25 "1+2^3*3"
+assert 33 "(4+2)^2-30+9*3"
 
 echo OK

@@ -124,7 +124,7 @@ Token *tokenize() {
     }
 
     // Single-letter punctuator
-    if (strchr("+-*/()<>",*p)) {
+    if (strchr("+-*/()<>^",*p)) {
       cur = new_token(TK_RESERVED, cur, p++,1);
       continue;
     }
@@ -154,6 +154,7 @@ typedef enum {
   ND_SUB, // -
   ND_MUL, // *
   ND_DIV, // /
+  ND_POW, // ^
   ND_EQ,  // ==
   ND_NE,  // !=
   ND_LT,  // <
@@ -196,6 +197,7 @@ Node *equality();
 Node *relational();
 Node *add();
 Node *mul();
+Node *_pow();
 Node *unary();
 Node *primary();
 
@@ -251,15 +253,27 @@ Node *add() {
   }
 }
 
-// mul = unary ("*" unary | "/" unary)*
+// mul = pow ("*" pow | "/" pow)*
 Node *mul() {
-  Node *node = unary();
+  Node *node = _pow();
 
   for (;;) {
     if (consume("*"))
-      node = new_binary(ND_MUL, node, unary());
+      node = new_binary(ND_MUL, node, _pow());
     else if (consume("/"))
-      node = new_binary(ND_DIV, node, unary());
+      node = new_binary(ND_DIV, node, _pow());
+    else
+      return node;
+  }
+}
+
+// pow = unary ("^" unary)*
+Node *_pow() {
+  Node *node = unary();
+
+  for (;;) {
+    if (consume("^"))
+      node = new_binary(ND_POW, node, unary());
     else
       return node;
   }
@@ -321,6 +335,16 @@ void gen(Node *node) {
   case ND_DIV:
     printf("  cqo\n");
     printf("  idiv rdi\n");
+    break;
+  case ND_POW:
+    // rax^rdi
+    printf("  mov rcx, 1\n");    // i = 0
+    printf("  mov rdx, rax\n");  // x = rax
+    printf("FOR_START:\n");      // for
+    printf("  imul rax, rdx\n"); // rax = rax * rdx
+    printf("  inc rcx\n");       // i++
+    printf("  cmp rcx, rdi\n");  // if rcx < rdi
+    printf("  jl FOR_START\n");  // -> for
     break;
   case ND_EQ:
     printf("  cmp rax, rdi\n");
